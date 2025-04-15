@@ -4,7 +4,7 @@ import logging
 
 # Ustawienie tokena bota
 TOKEN = '8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs'
-'  # <-- Pamiętaj, aby tu wstawić swój token!
+# <-- Pamiętaj, aby tu wstawić swój token!
 
 # Konfiguracja logów (opcjonalnie)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
