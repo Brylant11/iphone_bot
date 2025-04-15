@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler
 import logging
 
 # Ustawienie tokena bota
-TOKEN = '8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs
+TOKEN = '8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs'
 '  # <-- Pamiętaj, aby tu wstawić swój token!
 
 # Konfiguracja logów (opcjonalnie)
