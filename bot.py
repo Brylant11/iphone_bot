@@ -27,3 +27,28 @@ def main():
 
 if __name__ == '__main__':
     main()
+import os
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+
+# Pobierz token z zmiennej środowiskowej (upewnij się, że jest ustawiony w Renderze)
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+
+# Funkcja do obsługi komendy /start
+def start(update, context):
+    update.message.reply_text("Witaj, bot działa!")
+
+# Uruchomienie bota
+def run_bot():
+    port = int(os.getenv("PORT", 5000))  # Ustawienie domyślnego portu na 5000, jeśli nie ma zmiennej PORT
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    # Dodanie obsługi komend
+    dp.add_handler(CommandHandler("start", start))
+
+    # Uruchomienie bota
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    run_bot()
