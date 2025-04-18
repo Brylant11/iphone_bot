@@ -28,8 +28,9 @@ async def run_bot():
 
     app.add_handler(CommandHandler("start", start))
 
-    print("Bot uruchomiony...")
+    print("🔄 Bot startuje...")
     await app.run_polling()
+    print("✅ Bot działa.")
 
 # Funkcja startująca Flask + Bota
 def start_all():
