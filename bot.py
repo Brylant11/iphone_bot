@@ -4,7 +4,9 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from datetime import datetime
 import asyncio
 import os
+import threading
 
+# Token bota
 TOKEN = os.getenv("BOT_TOKEN") or "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"
 
 app_flask = Flask(__name__)
@@ -16,7 +18,10 @@ def home():
 
 # Komenda testowa
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("Komenda '/start' została wywołana.")
     current_hour = datetime.now().hour
+    print(f"Aktualna godzina: {current_hour}")
+    
     if 8 <= current_hour < 20:
         await update.message.reply_text("Cześć! Bot działa 🚀")
     else:
@@ -32,15 +37,17 @@ async def run_bot():
     await app.run_polling()
     print("✅ Bot działa.")
 
-# Funkcja startująca Flask + Bota
+# Funkcja startująca Flask + Bota w osobnych wątkach
 def start_all():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Flask działa w osobnym wątku
+    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=10000)).start()
 
+    # Bot działa na głównym wątku
+    loop = asyncio.get_event_loop()
     loop.create_task(run_bot())
-
-    print("Scrapowanie OLX...")  # albo inny log
-    app_flask.run(host="0.0.0.0", port=10000)
+    
+    print("Scrapowanie OLX...")  # Lub inne logi
+    # Aplikacja Flask działa w tle
 
 # Start całej apki
 if __name__ == "__main__":
