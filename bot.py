@@ -1,55 +1,78 @@
-from flask import Flask
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from datetime import datetime
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 import asyncio
-import os
+import datetime
+from threading import Thread
+import time
+import logging
+from keep_alive import keep_alive  # Jeśli potrzebujesz keep_alive
 
-# Token bota
-TOKEN = os.getenv("BOT_TOKEN") or "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"
+TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"  # Wstaw swój token bota
 
-# Tworzymy aplikację Flask
-app_flask = Flask(__name__)
+# Konfiguracja logowania
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Endpoint żeby Render nie usypiał bota
-@app_flask.route('/')
-def home():
-    print("Flask działa!")  # Logowanie, aby sprawdzić, czy Flask działa
-    return "Bot działa."
+# Funkcja do startu bota
+async def start(update, context):
+    current_time = datetime.datetime.now().strftime("%H:%M")
+    await update.message.reply_text(f"Bot jest aktywny! Aktualny czas: {current_time}")
+    logger.info(f"Użytkownik {update.effective_user.username} wysłał komendę /start.")
 
-# Komenda testowa
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    current_hour = datetime.now().hour
-    if 8 <= current_hour < 20:
-        await update.message.reply_text("Cześć! Bot działa 🚀")
+# Funkcja, aby bot działał tylko w określonych godzinach (8:00-20:00)
+async def check_time(update, context):
+    now = datetime.datetime.now()
+    if now.hour >= 8 and now.hour < 20:
+        await update.message.reply_text("Bot jest aktywny.")
     else:
-        await update.message.reply_text("Bot śpi 😴 (dostępny od 8:00 do 20:00)")
+        await update.message.reply_text("Bot nie jest aktywny. Przepraszamy, wróć później.")
+    logger.info(f"Użytkownik {update.effective_user.username} zapytał o status bota.")
+
+# Funkcja scrapowania OLX (przykład, wymaga implementacji scrapowania)
+def scrap_olx():
+    # Tutaj dodaj kod scrapujący OLX
+    logger.info("Scrapowanie OLX...")
+
+# Funkcja do uruchamiania scrapowania co np. 5 minut
+def start_scraping():
+    while True:
+        scrap_olx()
+        time.sleep(300)  # czekaj 5 minut
 
 # Funkcja uruchamiająca bota
 async def run_bot():
-    print("🔄 Bot startuje...")  # Logowanie przed uruchomieniem bota
-    app = ApplicationBuilder().token(TOKEN).build()
-    print("🔄 Bot zbudowany")  # Logowanie po zbudowaniu aplikacji
+    logger.info("Bot startuje...")
+    app = Application.builder().token(TOKEN).build()
 
+    # Komendy
     app.add_handler(CommandHandler("start", start))
-    print("🔄 Dodano handler")  # Logowanie po dodaniu handlera
+    app.add_handler(MessageHandler(filters.TEXT, check_time))
 
-    try:
-        await app.run_polling()
-    except Exception as e:
-        print(f"❌ Błąd przy uruchomieniu bota: {e}")
-    print("✅ Bot działa.")  # Logowanie po uruchomieniu bota
+    # Startowanie bota
+    await app.run_polling()
+    logger.info("Bot działa.")
 
-# Funkcja startująca Flask + Bota
+# Funkcja uruchamiająca Flask w tle
+def run_flask():
+    keep_alive()  # Uruchomienie Flask (jeśli potrzeba)
+
+# Funkcja uruchamiająca bota w tle
+def start_bot_in_background():
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())  # Dodajemy zadanie do pętli zdarzeń
+
+# Funkcja do uruchomienia wszystkiego
 def start_all():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Uruchomienie scrapowania w osobnym wątku
+    scraping_thread = Thread(target=start_scraping)
+    scraping_thread.start()
 
-    loop.create_task(run_bot())
+    # Uruchomienie Flask w osobnym wątku
+    flask_thread = Thread(target=run_flask)
+    flask_thread.start()
 
-    print("Scrapowanie OLX...")  # Logowanie przed uruchomieniem Flask
-    app_flask.run(host="0.0.0.0", port=10000)
+    # Uruchomienie bota w tle
+    start_bot_in_background()
 
-# Start całej apki
 if __name__ == "__main__":
     start_all()
