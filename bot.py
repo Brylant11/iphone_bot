@@ -11,6 +11,7 @@ from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
+    Dispatcher,
 )
 
 # ——— Konfiguracja logów ———
@@ -36,17 +37,62 @@ WEBHOOK_URL = BASE_URL + WEBHOOK_PATH
 
 # ——— Stałe i ceny ———
 AVERAGE_PRICE = {
-    'iphone x 64 gb': 650, 'iphone x 256 gb': 800,
-    # ... (reszta z poprzedniego słownika) ...
-    'iphone 13 pro max 512 gb': 2400,
+    'iphone x 64 gb': 650,
+    'iphone x 256 gb': 800,
+    'iphone 11 64 gb': 1000,
+    'iphone 11 128 gb': 1150,
+    'iphone 11 256 gb': 1300,
+    'iphone 12 64 gb': 1600,
+    'iphone 12 128 gb': 1800,
+    'iphone 12 256 gb': 2000,
+    'iphone 12 mini 64 gb': 1400,
+    'iphone 12 mini 128 gb': 1600,
+    'iphone 12 mini 256 gb': 1800,
+    'iphone 12 pro 128 gb': 2500,
+    'iphone 12 pro 256 gb': 2800,
+    'iphone 12 pro 512 gb': 3200,
+    'iphone 13 128 gb': 2500,
+    'iphone 13 256 gb': 2800,
+    'iphone 13 512 gb': 3200,
+    'iphone 13 mini 128 gb': 2200,
+    'iphone 13 mini 256 gb': 2500,
+    'iphone 13 mini 512 gb': 2900,
+    'iphone 13 pro 128 gb': 3000,
+    'iphone 13 pro 256 gb': 3300,
+    'iphone 13 pro 512 gb': 3700,
+    'iphone 13 pro max 128 gb': 3300,
+    'iphone 13 pro max 256 gb': 3600,
+    'iphone 13 pro max 512 gb': 4000,
+    'iphone 13 pro max 1 tb': 4500,
+    'iphone 14 128 gb': 3800,
+    'iphone 14 256 gb': 4100,
+    'iphone 14 512 gb': 4600,
+    'iphone 14 pro 128 gb': 4800,
+    'iphone 14 pro 256 gb': 5200,
+    'iphone 14 pro 512 gb': 5700,
+    'iphone 14 pro 1 tb': 6300,
+    'iphone 14 pro max 128 gb': 5300,
+    'iphone 14 pro max 256 gb': 5600,
+    'iphone 14 pro max 512 gb': 6100,
+    'iphone 14 pro max 1 tb': 6700,
+    'iphone 15 128 gb': 5000,
+    'iphone 15 256 gb': 5300,
+    'iphone 15 512 gb': 5800,
+    'iphone 15 pro 128 gb': 5900,
+    'iphone 15 pro 256 gb': 6200,
+    'iphone 15 pro 512 gb': 6700,
+    'iphone 15 pro max 128 gb': 6500,
+    'iphone 15 pro max 256 gb': 6800,
+    'iphone 15 pro max 512 gb': 7300,
+    'iphone 15 pro max 1 tb': 8000,
 }
 BASE_COORDS = (50.9849, 23.1721)
 MAX_DISTANCE_KM = 30
 PRICE_THRESHOLD = 100
 
-# Tworzymy instancję bota za pomocą tokena
 bot = Bot(TOKEN)
 app_flask = Flask(__name__)
+dispatcher = Dispatcher(bot, update_queue=None, workers=0, use_context=True)
 
 bot_start_time = time.time()
 sent_ads = set()
@@ -102,15 +148,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first=1
     )
 
-# ——— Użycie ApplicationBuilder w nowej wersji python-telegram-bot ———
-async def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    # Rejestracja handlerów
-    application.add_handler(CommandHandler("start", start))
-
-    # Uruchomienie bota
-    await application.run_polling()
+dispatcher.add_handler(CommandHandler("start", start))
 
 # ——— Webhook endpoint Flask ———
 @app_flask.route(WEBHOOK_PATH, methods=["POST"])
@@ -124,20 +162,22 @@ def webhook():
 def health():
     return "Bot działa!"
 
-def set_webhook():
+async def set_webhook():
     # Ustawiamy webhook w Telegramie
-    if bot.set_webhook(WEBHOOK_URL):
+    result = await bot.set_webhook(WEBHOOK_URL)
+    if result:
         logger.info(f"Webhook ustawiony na {WEBHOOK_URL}")
     else:
         logger.error("Nie udało się ustawić webhooka")
 
-def run():
+async def run():
     # 1) Ustaw webhook
-    set_webhook()
+    await set_webhook()
 
     # 2) Start Flask
     port = int(os.environ.get("PORT", 10000))
     app_flask.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    run()
+    import asyncio
+    asyncio.run(run())
