@@ -146,10 +146,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first=1
     )
 
-# Używamy Application do dodania handlera
+# Zmieniamy sposób uruchomienia aplikacji na asynchroniczny
 async def main():
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
+    # Czekamy na webhook w tle
     await application.run_polling()
 
 # ——— Webhook endpoint Flask ———
@@ -165,13 +166,13 @@ def webhook():
 def health():
     return "Bot działa!"
 
-def set_webhook():
-    # Ustawiamy webhook w Telegramie
-    bot.set_webhook(WEBHOOK_URL)
+# Zmieniamy funkcję set_webhook na asynchroniczną
+async def set_webhook():
+    await bot.set_webhook(WEBHOOK_URL)
 
 def run():
-    # 1) Ustaw webhook
-    set_webhook()
+    # 1) Ustaw webhook (asynchronicznie)
+    asyncio.run(set_webhook())
 
     # 2) Start Flask
     port = int(os.environ.get("PORT", 10000))
