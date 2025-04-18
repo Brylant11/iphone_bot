@@ -9,6 +9,7 @@ TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"
 
 # Funkcja startowa
 async def start(update, context):
+    print(f"Command received: {update.message.text}")  # Dodaj to do logów
     await update.message.reply_text("Witaj, bot działa!")
 
 # Główna funkcja

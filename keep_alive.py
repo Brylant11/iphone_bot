@@ -1,12 +1,15 @@
-import os
 from flask import Flask
+from threading import Thread
 
-app = Flask(__name__)
+app = Flask('')
 
 @app.route('/')
 def home():
-    return 'Bot działa!'
+    return "Bot działa!"
+
+def run():
+    app.run(host='0.0.0.0', port=10000)
 
 def keep_alive():
-    port = int(os.environ.get('PORT', 8080))  # Jeśli nie ma ustawionego portu, użyj 8080
-    app.run(host='0.0.0.0', port=port)
+    t = Thread(target=run)
+    t.start()
