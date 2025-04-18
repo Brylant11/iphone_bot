@@ -4,7 +4,6 @@ import os
 import time
 import logging
 import threading
-import asyncio
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask
@@ -50,7 +49,7 @@ PRICE_THRESHOLD = 100
 app_flask = Flask(__name__)
 bot_start_time = time.time()
 sent_ads = set()
-job_scheduled = {}
+jobs_started = set()
 
 def extract_price(text: str):
     nums = ''.join(c for c in text if c.isdigit())
@@ -61,6 +60,7 @@ def get_olx_ads():
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(URL, headers=headers)
     soup = BeautifulSoup(resp.text, "html.parser")
+
     offers = []
     for card in soup.select("div[data-cy='l-card']"):
         title_el = card.select_one("h6")
@@ -71,6 +71,7 @@ def get_olx_ads():
         time_el  = card.select_one("time")
         if not (title_el and link_el and price_el and lat_el and lon_el and time_el):
             continue
+
         title = title_el.get_text(strip=True).lower()
         price = extract_price(price_el.get_text())
         link  = link_el["href"]
@@ -79,6 +80,7 @@ def get_olx_ads():
         lon   = float(lon_el["content"])
         ts    = time_el["datetime"]  # "2025-04-18T12:34:56"
         created = time.mktime(time.strptime(ts, "%Y-%m-%dT%H:%M:%S"))
+
         offers.append({
             "id": ad_id,
             "title": title,
@@ -89,23 +91,29 @@ def get_olx_ads():
         })
     return offers
 
-def filter_offers(offers, chat_id, app):
-    global sent_ads
+def filter_offers(context):
+    chat_id = context.job.context
+    offers = get_olx_ads()
     for o in offers:
-        if o["id"] in sent_ads: continue
-        if o["created"] <= bot_start_time: continue
-        if o["price"] is None: continue
+        if o["id"] in sent_ads: 
+            continue
+        if o["created"] <= bot_start_time: 
+            continue
+        if o["price"] is None: 
+            continue
         dist = geodesic(BASE_COORDS, o["coords"]).km
-        if dist > MAX_DISTANCE_KM: continue
+        if dist > MAX_DISTANCE_KM: 
+            continue
+
         for model, avg in AVERAGE_PRICE.items():
             if model in o["title"] and o["price"] < avg - PRICE_THRESHOLD:
                 text = (
                     f"📱 *{o['title']}*\n"
                     f"💰 {o['price']} zł (avg {avg} zł)\n"
-                    f"🌍 {dist:.1f} km\n"
+                    f"🌍 {dist:.1f} km od Krasnegostawu\n"
                     f"🔗 [Link]({o['link']})"
                 )
-                app.bot.send_message(chat_id, text, parse_mode="Markdown")
+                context.bot.send_message(chat_id, text, parse_mode="Markdown")
                 sent_ads.add(o["id"])
                 break
 
@@ -115,28 +123,39 @@ def home():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    await update.message.reply_text("Uruchamiam monitoring OLX iPhone’ów…")
-    if job_scheduled.get(chat_id):
-        await update.message.reply_text("Monitor już działa.")
+    if chat_id in jobs_started:
+        await update.message.reply_text("Monitor już działa 😉")
         return
+
+    await update.message.reply_text("Uruchamiam monitoring OLX iPhone’ów…")
+
     # Zaplanuj job co 10 minut
     context.job_queue.run_repeating(
-        lambda ctx: filter_offers(get_olx_ads(), chat_id, context.application),
-        interval=600, first=1, context=chat_id
+        filter_offers,
+        interval=600,  # co 10 minut
+        first=1,
+        context=chat_id
     )
-    job_scheduled[chat_id] = True
-    await update.message.reply_text("Gotowe! Będę wysyłał nowe oferty.")
+    jobs_started.add(chat_id)
 
-async def run():
-    # Usuń webhook i drop pending przed pollingiem
-    app = ApplicationBuilder().token(TOKEN).build()
-    await app.bot.delete_webhook(drop_pending_updates=True)
-    app.add_handler(CommandHandler("start", start))
-    # Start Flask
-    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=int(os.environ.get("PORT",10000))), daemon=True).start()
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
+
+def main():
+    # 1) Start Flask
+    threading.Thread(target=run_flask, daemon=True).start()
     logger.info("Flask działa w tle")
-    # Start polling
-    await app.run_polling(drop_pending_updates=True)
+
+    # 2) Build and start bot
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+
+    # Usuń zaległe update’y przed pollingiem
+    app.bot.delete_webhook(drop_pending_updates=True)
+
+    logger.info("Start polling…")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()
