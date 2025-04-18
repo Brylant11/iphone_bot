@@ -1,81 +1,46 @@
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from flask import Flask
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from datetime import datetime
 import asyncio
-import datetime
-from threading import Thread
-import time
-from keep_alive import keep_alive  # Jeśli potrzebujesz keep_alive
+import os
 
-TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"  # Wstaw swój token bota
+TOKEN = os.getenv("BOT_TOKEN") or "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"
 
-# Funkcja do startu bota
-async def start(update, context):
-    current_time = datetime.datetime.now().strftime("%H:%M")
-    await update.message.reply_text(f"Bot jest aktywny! Aktualny czas: {current_time}")
+app_flask = Flask(__name__)
 
-# Funkcja, aby bot działał tylko w określonych godzinach (8:00-20:00)
-async def check_time(update, context):
-    now = datetime.datetime.now()
-    if now.hour >= 8 and now.hour < 20:
-        await update.message.reply_text("Bot jest aktywny.")
+# Endpoint żeby Render nie usypiał bota
+@app_flask.route('/')
+def home():
+    return "Bot działa."
+
+# Komenda testowa
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    current_hour = datetime.now().hour
+    if 8 <= current_hour < 20:
+        await update.message.reply_text("Cześć! Bot działa 🚀")
     else:
-        await update.message.reply_text("Bot nie jest aktywny. Przepraszamy, wróć później.")
-
-# Funkcja scrapowania OLX (przykład, wymaga implementacji scrapowania)
-def scrap_olx():
-    # Tutaj dodaj kod scrapujący OLX
-    print("Scrapowanie OLX...")
-
-# Funkcja do uruchamiania scrapowania co np. 5 minut
-def start_scraping():
-    while True:
-        scrap_olx()
-        time.sleep(300)  # czekaj 5 minut
+        await update.message.reply_text("Bot śpi 😴 (dostępny od 8:00 do 20:00)")
 
 # Funkcja uruchamiająca bota
 async def run_bot():
-from datetime import datetime
+    app = ApplicationBuilder().token(TOKEN).build()
 
-# Ustaw na True jeśli chcesz testować poza godzinami działania
-TEST_MODE = True
-
-
-def is_working_hours():
-    now = datetime.now().hour
-    return 8 <= now < 20 or TEST_MODE
-    app = Application.builder().token(TOKEN).build()
-
-    # Komendy
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT, check_time))
 
-    # Startowanie bota
-async def run_bot():
-    if not is_working_hours():
-        print("⏰ Bot nie działa poza godzinami 8–20.")
-        return
+    print("Bot uruchomiony...")
     await app.run_polling()
 
-# Funkcja uruchamiająca Flask w tle
-def run_flask():
-    keep_alive()  # Uruchomienie Flask (jeśli potrzeba)
-
-# Funkcja uruchamiająca bota w tle
-def start_bot_in_background():
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_bot())  # Dodajemy zadanie do pętli zdarzeń
-
-# Funkcja do uruchomienia wszystkiego
+# Funkcja startująca Flask + Bota
 def start_all():
-    # Uruchomienie scrapowania w osobnym wątku
-    scraping_thread = Thread(target=start_scraping)
-    scraping_thread.start()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-    # Uruchomienie Flask w osobnym wątku
-    flask_thread = Thread(target=run_flask)
-    flask_thread.start()
+    loop.create_task(run_bot())
 
-    # Uruchomienie bota w tle
-    start_bot_in_background()
+    print("Scrapowanie OLX...")  # albo inny log
+    app_flask.run(host="0.0.0.0", port=10000)
 
+# Start całej apki
 if __name__ == "__main__":
     start_all()
