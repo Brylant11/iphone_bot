@@ -5,7 +5,7 @@ import datetime
 import asyncio
 from telegram.ext import Application, CommandHandler
 
-TOKEN = "TU_WSTAW_TOKEN"  # <== Wklej tu swój token
+TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs" # <== Wklej tu swój token
 
 # Funkcja startowa
 async def start(update, context):
