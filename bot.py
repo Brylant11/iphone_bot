@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import datetime
+import asyncio  # Dodajemy import asyncio, aby naprawić błąd
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from keep_alive import keep_alive  # Jeśli potrzebujesz keep_alive
 
@@ -48,7 +49,7 @@ def run_flask():
 
 # Funkcja uruchamiająca bota w tle
 def start_bot_in_background():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()  # Tworzymy pętlę wydarzeń asyncio
     loop.create_task(run_bot())  # Dodajemy zadanie do pętli zdarzeń
 
 # Funkcja do uruchomienia wszystkiego
