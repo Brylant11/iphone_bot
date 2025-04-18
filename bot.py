@@ -1,5 +1,3 @@
-# bot.py
-
 import os
 import time
 import logging
@@ -23,12 +21,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ——— Token i stałe ———
-TOKEN = os.getenv("BOT_TOKEN")  # ustaw w Renderze: BOT_TOKEN=TwójToken
+TOKEN = os.getenv("BOT_TOKEN")  # Ustaw w Render: BOT_TOKEN=TwójToken
 if not TOKEN:
     logger.error("BRAK TOKENA! Ustaw zmienną środowiskową BOT_TOKEN.")
     exit(1)
 
-# Średnie ceny używanych iPhone’ów (X … 13 Pro Max)
+# Średnie ceny używanych iPhone’ów (iPhone X … 13 Pro Max)
 AVERAGE_PRICE = {
     'iphone x 64 gb': 650,    'iphone x 256 gb': 800,
     'iphone xr 64 gb': 700,   'iphone xr 128 gb': 800,
@@ -43,7 +41,7 @@ AVERAGE_PRICE = {
     'iphone 13 pro max 128 gb':2000,'iphone 13 pro max 256 gb':2200,'iphone 13 pro max 512 gb':2400,
 }
 
-# Krasnystaw (lat, lon)
+# Krasnystaw (lat, lon) i parametry
 BASE_COORDS = (50.9849, 23.1721)
 MAX_DISTANCE_KM = 30
 PRICE_THRESHOLD = 100  # PLN
@@ -115,8 +113,8 @@ def filter_offers(offers, chat_id, app):
                 if o["price"] < avg - PRICE_THRESHOLD:
                     text = (
                         f"📱 *{o['title']}*\n"
-                        f"💰 {o['price']} zł  (średnio {avg} zł)\n"
-                        f"🌍 {dist:.1f} km od Krasnystawu\n"
+                        f"💰 {o['price']} zł  (avg {avg} zł)\n"
+                        f"🌍 {dist:.1f} km od Krasnystawu\n"
                         f"🔗 [Link]({o['link']})"
                     )
                     app.bot.send_message(chat_id, text, parse_mode="Markdown")
@@ -130,8 +128,14 @@ def home():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global job_scheduled
     chat_id = update.effective_chat.id
-    await update.message.reply_text("Uruchamiam monitor OLX – będę wysyłał nowe oferty iPhone.")
+    await update.message.reply_text("Uruchamiam monitor OLX – będę wysyłać nowe oferty iPhone.")
     if not job_scheduled:
+        # odrzucamy wszystkie stare update'y
+        context.application.bot.delete_webhook(drop_pending_updates=True)
+        # konfigurujemy polling z drop_pending
+        context.application.updater.start_polling(drop_pending_updates=True)
+
+        # oraz nasz job co 10 minut
         context.job_queue.run_repeating(
             lambda ctx: filter_offers(get_olx_ads(), chat_id, context.application),
             interval=600,  # co 10 minut
@@ -147,14 +151,15 @@ def run_flask():
     app_flask.run(host="0.0.0.0", port=port)
 
 def main():
-    # 1) Flask w tle
+    # Flask w tle
     threading.Thread(target=run_flask, daemon=True).start()
     logger.info("Flask uruchomiony w tle.")
 
-    # 2) Telegram bot
+    # Telegram bot
     app = (
         ApplicationBuilder()
         .token(TOKEN)
+        .drop_pending_updates(True)  # <--- odrzucaj stare
         .build()
     )
     app.add_handler(CommandHandler("start", start))
