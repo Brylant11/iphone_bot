@@ -11,7 +11,6 @@ from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
-    Dispatcher,
 )
 
 # ——— Konfiguracja logów ———
@@ -45,9 +44,9 @@ BASE_COORDS = (50.9849, 23.1721)
 MAX_DISTANCE_KM = 30
 PRICE_THRESHOLD = 100
 
+# Tworzymy instancję bota za pomocą tokena
 bot = Bot(TOKEN)
 app_flask = Flask(__name__)
-dispatcher = Dispatcher(bot, update_queue=None, workers=0, use_context=True)
 
 bot_start_time = time.time()
 sent_ads = set()
@@ -65,7 +64,6 @@ def get_olx_ads():
     offers = []
     for card in soup.select("div[data-cy='l-card']"):
         # ... (jak wcześniej) ...
-        # wypełnij tak samo jak w poprzednim kodzie
         pass
     return offers
 
@@ -82,7 +80,7 @@ def filter_offers_and_notify(chat_id):
                 text = (
                     f"📱 *{o['title']}*\n"
                     f"💰 {o['price']} zł (avg {avg} zł)\n"
-                    f"🌍 {dist:.1f} km od Krasnegostawu\n"
+                    f"🌍 {dist:.1f} km od Krasnegostawu\n"
                     f"🔗 [Link]({o['link']})"
                 )
                 bot.send_message(chat_id, text, parse_mode="Markdown")
@@ -104,7 +102,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first=1
     )
 
-dispatcher.add_handler(CommandHandler("start", start))
+# ——— Użycie ApplicationBuilder w nowej wersji python-telegram-bot ———
+async def main():
+    application = ApplicationBuilder().token(TOKEN).build()
+
+    # Rejestracja handlerów
+    application.add_handler(CommandHandler("start", start))
+
+    # Uruchomienie bota
+    await application.run_polling()
 
 # ——— Webhook endpoint Flask ———
 @app_flask.route(WEBHOOK_PATH, methods=["POST"])
