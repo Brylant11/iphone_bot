@@ -14,8 +14,6 @@ async def start(update, context):
 
 # Funkcja do uruchamiania bota
 async def run_bot():
-    keep_alive()  # Uruchomienie Flask serwera (anty-usypiacz)
-
     app = Application.builder().token(TOKEN).build()
 
     # Usuń webhooka (ważne przy pracy na polling)
@@ -32,7 +30,7 @@ async def run_bot():
 # Funkcja do uruchamiania Flask w tle
 def run_flask():
     from keep_alive import keep_alive
-    keep_alive()  # Uruchomienie Flask na porcie
+    keep_alive(port=5000)  # Uruchomienie Flask na porcie 5000
 
 # Start wszystkiego
 if __name__ == "__main__":
