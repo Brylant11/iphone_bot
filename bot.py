@@ -11,7 +11,6 @@ from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
-    Dispatcher,
 )
 
 # ——— Konfiguracja logów ———
@@ -92,7 +91,6 @@ PRICE_THRESHOLD = 100
 
 bot = Bot(TOKEN)
 app_flask = Flask(__name__)
-dispatcher = Dispatcher(bot, update_queue=None, workers=0, use_context=True)
 
 bot_start_time = time.time()
 sent_ads = set()
@@ -109,7 +107,7 @@ def get_olx_ads():
     soup = BeautifulSoup(resp.text, "html.parser")
     offers = []
     for card in soup.select("div[data-cy='l-card']"):
-        # ... (jak wcześniej) ...
+        # ... (implementacja pozyskiwania ofert z OLX) ...
         pass
     return offers
 
@@ -148,12 +146,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first=1
     )
 
-dispatcher.add_handler(CommandHandler("start", start))
+# Używamy Application do dodania handlera
+async def main():
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    await application.run_polling()
 
 # ——— Webhook endpoint Flask ———
 @app_flask.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher = Dispatcher(bot, update_queue=None, workers=0, use_context=True)
     dispatcher.process_update(update)
     return "OK"
 
@@ -162,22 +165,17 @@ def webhook():
 def health():
     return "Bot działa!"
 
-async def set_webhook():
+def set_webhook():
     # Ustawiamy webhook w Telegramie
-    result = await bot.set_webhook(WEBHOOK_URL)
-    if result:
-        logger.info(f"Webhook ustawiony na {WEBHOOK_URL}")
-    else:
-        logger.error("Nie udało się ustawić webhooka")
+    bot.set_webhook(WEBHOOK_URL)
 
-async def run():
+def run():
     # 1) Ustaw webhook
-    await set_webhook()
+    set_webhook()
 
     # 2) Start Flask
     port = int(os.environ.get("PORT", 10000))
     app_flask.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(run())
+    run()
