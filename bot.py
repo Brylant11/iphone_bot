@@ -29,8 +29,7 @@ async def run_bot():
 
 # Funkcja do uruchamiania Flask w tle
 def run_flask():
-    from keep_alive import keep_alive
-    keep_alive(port=5000)  # Uruchomienie Flask na porcie 5000
+    keep_alive()  # Uruchomienie Flask bez portu
 
 # Start wszystkiego
 if __name__ == "__main__":
@@ -38,5 +37,7 @@ if __name__ == "__main__":
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    # Uruchomienie bota
-    asyncio.run(run_bot())
+    # Uruchomienie bota bez `asyncio.run()`
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())
+    loop.run_forever()
