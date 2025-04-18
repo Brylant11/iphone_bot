@@ -1,6 +1,4 @@
 from keep_alive import keep_alive
-import time
-import datetime
 import asyncio
 from telegram.ext import Application, CommandHandler
 from threading import Thread
@@ -37,11 +35,14 @@ def start_all():
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    # Uruchomienie bota w tle za pomocą asyncio.create_task
-    asyncio.create_task(run_bot())
+    # Utworzenie pętli zdarzeń
+    loop = asyncio.get_event_loop()
 
-    # Pętla, aby aplikacja działała
-    asyncio.get_event_loop().run_forever()
+    # Uruchomienie zadania bota w pętli
+    loop.create_task(run_bot())
+
+    # Uruchomienie pętli zdarzeń
+    loop.run_forever()
 
 if __name__ == "__main__":
     start_all()
