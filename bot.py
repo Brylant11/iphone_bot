@@ -39,5 +39,5 @@ if __name__ == "__main__":
 
     # Uruchomienie bota bez `asyncio.run()`
     loop = asyncio.get_event_loop()
-    loop.create_task(run_bot())
-    loop.run_forever()
+    loop.create_task(run_bot())  # Zainicjuj zadanie bota w tle
+    loop.run_forever()  # Uruchom pętlę event loop
