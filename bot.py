@@ -38,6 +38,7 @@ from datetime import datetime
 # Ustaw na True jeśli chcesz testować poza godzinami działania
 TEST_MODE = True
 
+
 def is_working_hours():
     now = datetime.now().hour
     return 8 <= now < 20 or TEST_MODE
@@ -48,9 +49,10 @@ def is_working_hours():
     app.add_handler(MessageHandler(filters.TEXT, check_time))
 
     # Startowanie bota
-if not is_working_hours():
-    print("Bot nie działa poza godzinami 8–20. Śpi z godnością 😴")
-    return
+async def run_bot():
+    if not is_working_hours():
+        print("⏰ Bot nie działa poza godzinami 8–20.")
+        return
     await app.run_polling()
 
 # Funkcja uruchamiająca Flask w tle
