@@ -12,6 +12,7 @@ from telegram.ext import (
     ContextTypes,
     CommandHandler,
 )
+import asyncio  # <-- Dodaj ten import
 
 # ——— Konfiguracja logów ———
 logging.basicConfig(
