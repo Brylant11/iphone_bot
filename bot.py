@@ -6,13 +6,13 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request
 from geopy.distance import geodesic
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
+    Application,
     CommandHandler,
+    ContextTypes,
 )
-import asyncio  # <-- Dodaj ten import
+import asyncio
 
 # ——— Konfiguracja logów ———
 logging.basicConfig(
@@ -37,66 +37,34 @@ WEBHOOK_URL = BASE_URL + WEBHOOK_PATH
 
 # ——— Stałe i ceny ———
 AVERAGE_PRICE = {
-    'iphone x 64 gb': 650,
-    'iphone x 256 gb': 800,
-    'iphone 11 64 gb': 1000,
-    'iphone 11 128 gb': 1150,
-    'iphone 11 256 gb': 1300,
-    'iphone 12 64 gb': 1600,
-    'iphone 12 128 gb': 1800,
-    'iphone 12 256 gb': 2000,
-    'iphone 12 mini 64 gb': 1400,
-    'iphone 12 mini 128 gb': 1600,
-    'iphone 12 mini 256 gb': 1800,
-    'iphone 12 pro 128 gb': 2500,
-    'iphone 12 pro 256 gb': 2800,
-    'iphone 12 pro 512 gb': 3200,
-    'iphone 13 128 gb': 2500,
-    'iphone 13 256 gb': 2800,
-    'iphone 13 512 gb': 3200,
-    'iphone 13 mini 128 gb': 2200,
-    'iphone 13 mini 256 gb': 2500,
-    'iphone 13 mini 512 gb': 2900,
-    'iphone 13 pro 128 gb': 3000,
-    'iphone 13 pro 256 gb': 3300,
-    'iphone 13 pro 512 gb': 3700,
-    'iphone 13 pro max 128 gb': 3300,
-    'iphone 13 pro max 256 gb': 3600,
-    'iphone 13 pro max 512 gb': 4000,
-    'iphone 13 pro max 1 tb': 4500,
-    'iphone 14 128 gb': 3800,
-    'iphone 14 256 gb': 4100,
-    'iphone 14 512 gb': 4600,
-    'iphone 14 pro 128 gb': 4800,
-    'iphone 14 pro 256 gb': 5200,
-    'iphone 14 pro 512 gb': 5700,
-    'iphone 14 pro 1 tb': 6300,
-    'iphone 14 pro max 128 gb': 5300,
-    'iphone 14 pro max 256 gb': 5600,
-    'iphone 14 pro max 512 gb': 6100,
-    'iphone 14 pro max 1 tb': 6700,
-    'iphone 15 128 gb': 5000,
-    'iphone 15 256 gb': 5300,
-    'iphone 15 512 gb': 5800,
-    'iphone 15 pro 128 gb': 5900,
-    'iphone 15 pro 256 gb': 6200,
-    'iphone 15 pro 512 gb': 6700,
-    'iphone 15 pro max 128 gb': 6500,
-    'iphone 15 pro max 256 gb': 6800,
-    'iphone 15 pro max 512 gb': 7300,
-    'iphone 15 pro max 1 tb': 8000,
+    'iphone x 64 gb': 650, 'iphone x 256 gb': 800,
+    'iphone 13 pro max 512 gb': 2400, 'iphone 12 64 gb': 1500,
+    'iphone 12 128 gb': 1800, 'iphone 13 64 gb': 2200,
+    'iphone 13 256 gb': 2600, 'iphone 14 pro 128 gb': 4500,
+    'iphone 14 pro 256 gb': 5000, 'iphone 14 pro max 128 gb': 5300,
+    'iphone 14 pro max 256 gb': 5800,
+    'iphone 14 pro max 512 gb': 6300,
+    'iphone 13 pro 128 gb': 2900, 'iphone 13 pro 256 gb': 3300,
+    'iphone 13 128 gb': 2500, 'iphone 14 128 gb': 4200,
+    'iphone 14 256 gb': 4600, 'iphone 12 pro 64 gb': 2800,
+    'iphone 12 pro 128 gb': 3200, 'iphone 12 pro 256 gb': 3600,
+    'iphone 11 64 gb': 1300, 'iphone 11 128 gb': 1700,
+    'iphone 11 pro 64 gb': 2400, 'iphone 11 pro 256 gb': 2800,
+    'iphone 11 pro max 64 gb': 3000, 'iphone 11 pro max 256 gb': 3400,
+    'iphone se 64 gb': 800, 'iphone se 128 gb': 1000,
+    'iphone se 256 gb': 1200,
+    'iphone 7 32 gb': 500, 'iphone 7 128 gb': 600,
+    'iphone 8 64 gb': 800, 'iphone 8 128 gb': 1000,
+    'iphone 8 256 gb': 1200,
 }
-BASE_COORDS = (50.9849, 23.1721)
+
+BASE_COORDS = (50.9849, 23.1721)  # Przykładowa lokalizacja (np. Krasnystaw)
 MAX_DISTANCE_KM = 30
 PRICE_THRESHOLD = 100
 
-bot = Bot(TOKEN)
 app_flask = Flask(__name__)
 
-bot_start_time = time.time()
-sent_ads = set()
-jobs_started = set()
-
+# ——— Funkcje pomocnicze ———
 def extract_price(text: str):
     nums = ''.join(c for c in text if c.isdigit())
     return int(nums) if nums else None
@@ -108,8 +76,19 @@ def get_olx_ads():
     soup = BeautifulSoup(resp.text, "html.parser")
     offers = []
     for card in soup.select("div[data-cy='l-card']"):
-        # ... (implementacja pozyskiwania ofert z OLX) ...
-        pass
+        title = card.select_one(".css-1g20a2m").text.strip()
+        price = extract_price(card.select_one(".css-1hbw00a").text.strip())
+        link = card.select_one("a")["href"]
+        coords = (float(card.select_one(".css-vpzd7v").text.split(",")[0]),
+                  float(card.select_one(".css-vpzd7v").text.split(",")[1]))
+        offers.append({
+            "title": title,
+            "price": price,
+            "link": link,
+            "coords": coords,
+            "id": hash(link),  # unique id
+            "created": int(time.time())
+        })
     return offers
 
 def filter_offers_and_notify(chat_id):
@@ -121,10 +100,10 @@ def filter_offers_and_notify(chat_id):
         if dist > MAX_DISTANCE_KM:
             continue
         for model, avg in AVERAGE_PRICE.items():
-            if model in o["title"] and o["price"] < avg - PRICE_THRESHOLD:
+            if model in o["title"].lower() and o["price"] < avg - PRICE_THRESHOLD:
                 text = (
                     f"📱 *{o['title']}*\n"
-                    f"💰 {o['price']} zł (avg {avg} zł)\n"
+                    f"💰 {o['price']} zł (średnia {avg} zł)\n"
                     f"🌍 {dist:.1f} km od Krasnegostawu\n"
                     f"🔗 [Link]({o['link']})"
                 )
@@ -147,19 +126,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first=1
     )
 
-# Zmieniamy sposób uruchomienia aplikacji na asynchroniczny
-async def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    # Czekamy na webhook w tle
-    await application.run_polling()
+# Tworzenie aplikacji
+application = Application.builder().token(TOKEN).build()
+
+# Dodaj handler
+application.add_handler(CommandHandler("start", start))
 
 # ——— Webhook endpoint Flask ———
 @app_flask.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher = Dispatcher(bot, update_queue=None, workers=0, use_context=True)
-    dispatcher.process_update(update)
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.process_update(update)
     return "OK"
 
 # ——— Keep‑alive endpoint ———
@@ -167,17 +144,20 @@ def webhook():
 def health():
     return "Bot działa!"
 
-# Zmieniamy funkcję set_webhook na asynchroniczną
 async def set_webhook():
-    await bot.set_webhook(WEBHOOK_URL)
+    if await application.bot.set_webhook(WEBHOOK_URL):
+        logger.info(f"Webhook ustawiony na {WEBHOOK_URL}")
+    else:
+        logger.error("Nie udało się ustawić webhooka")
 
-def run():
-    # 1) Ustaw webhook (asynchronicznie)
-    asyncio.run(set_webhook())
+async def run():
+    # 1) Ustaw webhook
+    await set_webhook()
 
     # 2) Start Flask
     port = int(os.environ.get("PORT", 10000))
     app_flask.run(host="0.0.0.0", port=port)
 
+# Uruchamianie aplikacji
 if __name__ == "__main__":
-    run()
+    asyncio.run(run())
