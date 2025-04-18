@@ -46,6 +46,11 @@ async def run_bot():
 def run_flask():
     keep_alive()  # Uruchomienie Flask (jeśli potrzeba)
 
+# Funkcja uruchamiająca bota w tle
+def start_bot_in_background():
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())  # Dodajemy zadanie do pętli zdarzeń
+
 # Funkcja do uruchomienia wszystkiego
 def start_all():
     # Uruchomienie scrapowania w osobnym wątku
@@ -56,8 +61,8 @@ def start_all():
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    # Uruchomienie bota
-    asyncio.run(run_bot())
+    # Uruchomienie bota w tle
+    start_bot_in_background()
 
 if __name__ == "__main__":
     start_all()
