@@ -33,6 +33,14 @@ def start_scraping():
 
 # Funkcja uruchamiająca bota
 async def run_bot():
+from datetime import datetime
+
+# Ustaw na True jeśli chcesz testować poza godzinami działania
+TEST_MODE = True
+
+def is_working_hours():
+    now = datetime.now().hour
+    return 8 <= now < 20 or TEST_MODE
     app = Application.builder().token(TOKEN).build()
 
     # Komendy
@@ -40,6 +48,9 @@ async def run_bot():
     app.add_handler(MessageHandler(filters.TEXT, check_time))
 
     # Startowanie bota
+if not is_working_hours():
+    print("Bot nie działa poza godzinami 8–20. Śpi z godnością 😴")
+    return
     await app.run_polling()
 
 # Funkcja uruchamiająca Flask w tle
