@@ -31,13 +31,17 @@ async def run_bot():
 def run_flask():
     keep_alive()  # Uruchomienie Flask bez portu
 
-# Start wszystkiego
-if __name__ == "__main__":
+# Funkcja do uruchomienia wszystkiego
+def start_all():
     # Uruchomienie Flask w osobnym wątku
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    # Uruchomienie bota bez `asyncio.run()`
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_bot())  # Zainicjuj zadanie bota w tle
-    loop.run_forever()  # Uruchom pętlę event loop
+    # Uruchomienie bota w tle za pomocą asyncio.create_task
+    asyncio.create_task(run_bot())
+
+    # Pętla, aby aplikacja działała
+    asyncio.get_event_loop().run_forever()
+
+if __name__ == "__main__":
+    start_all()
