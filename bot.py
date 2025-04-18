@@ -1,29 +1,44 @@
-# bot.py
 from keep_alive import keep_alive
-import asyncio
+import time
 import datetime
+import asyncio
 from telegram.ext import Application, CommandHandler
+from threading import Thread
 
-TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"  # <-- pamiętaj, schowaj go później ;)
+TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"  # Wstaw tutaj swój token
 
-# Komenda /start
+# Funkcja startowa
 async def start(update, context):
     print("Odebrano komendę /start")
     await update.message.reply_text("Witaj, bot działa!")
 
-# Główna funkcja
+# Funkcja do uruchamiania bota
 async def run_bot():
-    keep_alive()
+    keep_alive()  # Uruchomienie Flask serwera (anty-usypiacz)
 
     app = Application.builder().token(TOKEN).build()
+
+    # Usuń webhooka (ważne przy pracy na polling)
     await app.bot.delete_webhook(drop_pending_updates=True)
 
+    # Rejestruj komendy
     app.add_handler(CommandHandler("start", start))
 
-    print("Bot wystartował i nasłuchuje!")
+    print("Bot wystartował!")
 
-    # Tu najważniejsze: polling!
+    # Startuj bota
     await app.run_polling()
 
+# Funkcja do uruchamiania Flask w tle
+def run_flask():
+    from keep_alive import keep_alive
+    keep_alive()  # Uruchomienie Flask na porcie
+
+# Start wszystkiego
 if __name__ == "__main__":
+    # Uruchomienie Flask w osobnym wątku
+    flask_thread = Thread(target=run_flask)
+    flask_thread.start()
+
+    # Uruchomienie bota
     asyncio.run(run_bot())
