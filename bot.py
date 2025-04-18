@@ -1,54 +1,39 @@
-from telegram import Bot
+# bot.py
+from keep_alive import keep_alive
+import time
+import datetime
+import asyncio
 from telegram.ext import Application, CommandHandler
-import logging
 
-# Ustawienie tokena bota
-TOKEN = '8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs'
-# <-- Pamiętaj, aby tu wstawić swój token!
+TOKEN = "8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs"
 
-# Konfiguracja logów (opcjonalnie)
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Funkcja obsługująca komendę /start
+# Funkcja startowa
 async def start(update, context):
-    await update.message.reply_text("Witaj! Twój bot działa!")
+    await update.message.reply_text("Witaj, bot działa!")
 
-def main():
-    # Tworzymy aplikację
-    application = Application.builder().token(TOKEN).build()
+# Główna funkcja
+async def run_bot():
+    keep_alive()  # <- URUCHAMIAMY serwer Flask
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
 
-    # Dodajemy handler komendy '/start'
-    application.add_handler(CommandHandler('start', start))
+    print("Bot wystartował!")
 
-    # Uruchamiamy bota
-    application.run_polling()
+    await app.initialize()
+    await app.start()
 
-if __name__ == '__main__':
-    main()
-import os
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+    try:
+        while True:
+            current_hour = datetime.datetime.now().hour
+            if 8 <= current_hour < 20:
+                await asyncio.sleep(10)
+            else:
+                print("Poza godzinami pracy (8–20), bot śpi 😴")
+                await asyncio.sleep(60 * 10)
+    finally:
+        await app.stop()
+        await app.shutdown()
 
-# Pobierz token z zmiennej środowiskowej (upewnij się, że jest ustawiony w Renderze)
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-
-# Funkcja do obsługi komendy /start
-def start(update, context):
-    update.message.reply_text("Witaj, bot działa!")
-
-# Uruchomienie bota
-def run_bot():
-    port = int(os.getenv("PORT", 5000))  # Ustawienie domyślnego portu na 5000, jeśli nie ma zmiennej PORT
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    # Dodanie obsługi komend
-    dp.add_handler(CommandHandler("start", start))
-
-    # Uruchomienie bota
-    updater.start_polling()
-    updater.idle()
-
+# Start wszystkiego
 if __name__ == "__main__":
-    run_bot()
+    asyncio.run(run_bot())
