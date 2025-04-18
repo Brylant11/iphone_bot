@@ -1,3 +1,5 @@
+# bot.py
+
 import os
 import time
 import logging
@@ -107,7 +109,6 @@ def filter_offers(offers, chat_id, app):
         if dist > MAX_DISTANCE_KM:
             continue
 
-        # znajdź pasujący model w AVERAGE_PRICE
         for model, avg in AVERAGE_PRICE.items():
             if model in o["title"]:
                 if o["price"] < avg - PRICE_THRESHOLD:
@@ -128,14 +129,8 @@ def home():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global job_scheduled
     chat_id = update.effective_chat.id
-    await update.message.reply_text("Uruchamiam monitor OLX – będę wysyłać nowe oferty iPhone.")
+    await update.message.reply_text("Uruchamiam monitor OLX – będę wysyłał nowe oferty iPhone.")
     if not job_scheduled:
-        # odrzucamy wszystkie stare update'y
-        context.application.bot.delete_webhook(drop_pending_updates=True)
-        # konfigurujemy polling z drop_pending
-        context.application.updater.start_polling(drop_pending_updates=True)
-
-        # oraz nasz job co 10 minut
         context.job_queue.run_repeating(
             lambda ctx: filter_offers(get_olx_ads(), chat_id, context.application),
             interval=600,  # co 10 minut
@@ -151,21 +146,21 @@ def run_flask():
     app_flask.run(host="0.0.0.0", port=port)
 
 def main():
-    # Flask w tle
+    # 1) Flask w tle
     threading.Thread(target=run_flask, daemon=True).start()
     logger.info("Flask uruchomiony w tle.")
 
-    # Telegram bot
+    # 2) Telegram bot
     app = (
         ApplicationBuilder()
         .token(TOKEN)
-        .drop_pending_updates(True)  # <--- odrzucaj stare
         .build()
     )
     app.add_handler(CommandHandler("start", start))
 
     logger.info("Start polling bota…")
-    app.run_polling()
+    # Tu porzucamy wszystkie zaległe update'y, by uniknąć 409
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
