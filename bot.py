@@ -16,31 +16,30 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# --- Konfiguracja logów ---
+# ——— Konfiguracja logów ———
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- Token i stałe ---
+# ——— Token i stałe ———
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     logger.error("BRAK TOKENA! Ustaw zmienną środowiskową BOT_TOKEN.")
     exit(1)
 
-# Średnie ceny - dane rzeczywiste (przykładowe)
 AVERAGE_PRICE = {
-    'iphone x 64 gb': 300,    'iphone x 256 gb': 400,
-    'iphone xs 64 gb': 400,   'iphone xs 256 gb': 500,
-    'iphone xr 64 gb': 350,   'iphone xr 128 gb': 400,   'iphone xr 256 gb': 450,
-    'iphone 11 64 gb': 600,   'iphone 11 128 gb': 650,   'iphone 11 256 gb': 700,
-    'iphone 11 pro 64 gb': 700, 'iphone 11 pro 256 gb': 900, 'iphone 11 pro 512 gb': 1100,
-    'iphone 11 pro max 64 gb': 800, 'iphone 11 pro max 256 gb': 1000, 'iphone 11 pro max 512 gb': 1200,
-    'iphone 12 64 gb': 1200,  'iphone 12 128 gb': 1300,  'iphone 12 256 gb': 1400,
-    'iphone 12 mini 64 gb': 1000, 'iphone 12 mini 128 gb': 1100, 'iphone 12 mini 256 gb': 1200,
-    'iphone 12 pro 128 gb': 1500, 'iphone 12 pro 256 gb': 1600, 'iphone 12 pro 512 gb': 1700,
-    'iphone 12 pro max 128 gb': 1600, 'iphone 12 pro max 256 gb': 1700, 'iphone 12 pro max 512 gb': 1800,
+    'iphone x 64 gb': 650, 'iphone x 256 gb': 800,
+    'iphone xr 64 gb': 700, 'iphone xr 128 gb': 800,
+    'iphone xs 64 gb': 700, 'iphone xs 256 gb': 850,
+    'iphone xs max 64 gb': 850, 'iphone xs max 256 gb': 1000,
+    'iphone 11 64 gb': 750, 'iphone 11 128 gb': 800, 'iphone 11 256 gb': 900,
+    'iphone 11 pro 64 gb': 1000, 'iphone 11 pro 256 gb': 1200,
+    'iphone 11 pro max 64 gb': 1100, 'iphone 11 pro max 256 gb': 1300,
+    'iphone 12 64 gb': 1100, 'iphone 12 128 gb': 1200, 'iphone 12 256 gb': 1300,
+    'iphone 12 pro 128 gb': 1400, 'iphone 12 pro 256 gb': 1600,
+    'iphone 12 pro max 128 gb': 1500, 'iphone 12 pro max 256 gb': 1700,
 }
 
 BASE_COORDS = (50.9849, 23.1721)
@@ -77,7 +76,7 @@ def get_olx_ads():
         ad_id = card.get("data-id")
         lat   = float(lat_el["content"])
         lon   = float(lon_el["content"])
-        ts    = time_el["datetime"]  # "2025-04-18T12:34:56"
+        ts    = time_el["datetime"]
         created = time.mktime(time.strptime(ts, "%Y-%m-%dT%H:%M:%S"))
         offers.append({
             "id": ad_id,
@@ -102,7 +101,7 @@ def filter_offers(offers, chat_id, app):
                 text = (
                     f"📱 *{o['title']}*\n"
                     f"💰 {o['price']} zł (avg {avg} zł)\n"
-                    f"🌍 {dist:.1f} km\n"
+                    f"🌍 {dist:.1f} km\n"
                     f"🔗 [Link]({o['link']})"
                 )
                 app.bot.send_message(chat_id, text, parse_mode="Markdown")
@@ -130,9 +129,11 @@ async def run():
     app = ApplicationBuilder().token(TOKEN).build()
     await app.bot.delete_webhook(drop_pending_updates=True)
     app.add_handler(CommandHandler("start", start))
-    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=int(os.environ.get("PORT",10000))), daemon=True).start()
+    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000))), daemon=True).start()
     logger.info("Flask działa w tle")
     await app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    loop = asyncio.get_event_loop()
+    loop.create_task(run())
+    loop.run_forever()
