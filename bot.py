@@ -138,6 +138,11 @@ def start_bot():
     app_flask = Application.builder().token(TOKEN).build()
     app_flask.add_handler(CommandHandler("start", start))
 
+    # Dodanie prostego route dla `/` w Flask
+    @app.route('/')
+    def home():
+        return "Bot działa prawidłowo!"
+
     # Startuje tylko Flask w osobnym wątku
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=10000), daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()  # Pingowanie co 5 minut
