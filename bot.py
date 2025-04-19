@@ -10,8 +10,8 @@ import threading
 import time
 
 # ======= KONFIGURACJA =======
-TOKEN = 'TU_WKLEJ_TOKEN_BOTA'
-CHAT_ID = 'TU_WKLEJ_CHAT_ID'  # lub użyj update.effective_chat.id w handlerze
+TOKEN = '8078750965:AAHOJreGct5e0mxEva8QIjPbUXMpSQromfs'
+CHAT_ID = '192506976'  # lub użyj update.effective_chat.id w handlerze
 CITY_COORDS = (50.9844, 23.1735)  # Krasnystaw
 RADIUS_KM = 30
 KEYWORD = 'iphone'
