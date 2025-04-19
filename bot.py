@@ -5,7 +5,7 @@ from telegram import Bot
 from telegram.ext import Application, CommandHandler
 import asyncio
 from datetime import datetime, timedelta
-from flask import Flask
+from quart import Quart, jsonify
 import threading
 import time
 
@@ -24,7 +24,7 @@ END_HOUR = 20
 
 # ============================
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 # Funkcja do pobierania ofert z OLX
 def get_olx_offers():
@@ -128,7 +128,7 @@ def keep_alive():
         # Pingowanie co 5 minut
         print("Pingowanie serwera... Utrzymanie aktywności!")
         try:
-            requests.get("http://127.0.0.1:10000")
+            requests.get("http://127.0.0.1:5000")
         except requests.exceptions.RequestException:
             pass
         time.sleep(300)  # co 5 minut
@@ -140,16 +140,16 @@ def start_bot():
 
     # Dodanie prostego route dla `/` w Flask
     @app.route('/')
-    def home():
-        return "Bot działa prawidłowo!"
+    async def home():
+        return jsonify({"message": "Bot działa prawidłowo!"})
 
     # Startuje tylko Flask w osobnym wątku
-    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=10000), daemon=True).start()
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000), daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()  # Pingowanie co 5 minut
     print("Flask działa w tle")
 
     asyncio.run(run())
 
-# ========== MAIN ========== 
+# ========== MAIN ==========
 if __name__ == '__main__':
     start_bot()
