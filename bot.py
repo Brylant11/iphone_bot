@@ -26,6 +26,7 @@ END_HOUR = 20
 
 app = Flask(__name__)
 
+# Funkcja do pobierania ofert z OLX
 def get_olx_offers():
     url = f'https://www.olx.pl/oferty/q-{KEYWORD}/'
     response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -55,12 +56,14 @@ def get_olx_offers():
 
     return offers
 
+# Funkcja do obliczania średniej ceny
 def calculate_average_price(offers):
     prices = [offer['price'] for offer in offers if offer['price'] > 100]  # ignorujemy fejkowe
     if not prices:
         return 0
     return sum(prices) / len(prices)
 
+# Funkcja do pobierania współrzędnych miasta
 def get_coordinates(city_name):
     try:
         url = f"https://nominatim.openstreetmap.org/search?format=json&q={city_name}"
@@ -73,6 +76,7 @@ def get_coordinates(city_name):
     except:
         return None
 
+# Funkcja do sprawdzania, czy oferta jest w promieniu 30 km
 def is_within_radius(city_name):
     coords = get_coordinates(city_name)
     if coords:
@@ -80,6 +84,7 @@ def is_within_radius(city_name):
         return distance <= RADIUS_KM
     return False
 
+# Funkcja do sprawdzania ofert
 async def check_offers(bot: Bot):
     print("Sprawdzanie ofert...")
     all_offers = get_olx_offers()
@@ -95,12 +100,14 @@ async def check_offers(bot: Bot):
         message = f"🛒 *{deal['title']}*\n💸 {deal['price']} zł\n📍 {deal['location']}\n🔗 [Zobacz ofertę]({deal['link']})"
         await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode='Markdown')
 
+# Funkcja startowa dla komendy /start
 async def start(update, context):
     await update.message.reply_text("Bot uruchomiony i szuka iPhone'ów! 🔍")
 
+# Główna funkcja uruchamiająca bota
 async def run():
     bot = Bot(token=TOKEN)
-    
+
     # Zainicjujemy pierwsze wyszukiwanie
     await check_offers(bot)
 
@@ -115,6 +122,7 @@ async def run():
         # Sprawdzaj co 10 minut
         await asyncio.sleep(600)  # 10 minut
 
+# Funkcja do pingowania serwera co 5 minut
 def keep_alive():
     while True:
         # Pingowanie co 5 minut
@@ -125,6 +133,7 @@ def keep_alive():
             pass
         time.sleep(300)  # co 5 minut
 
+# Funkcja do uruchomienia bota
 def start_bot():
     app_flask = Application.builder().token(TOKEN).build()
     app_flask.add_handler(CommandHandler("start", start))
@@ -136,6 +145,6 @@ def start_bot():
 
     asyncio.run(run())
 
-# ========== MAIN ==========
+# ========== MAIN ========== 
 if __name__ == '__main__':
     start_bot()
